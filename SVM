@@ -1,0 +1,32 @@
+from sklearn import svm               # svm函数需要的
+import numpy as np                    # numpy科学计算库
+from sklearn import model_selection   
+def iris_type(s):
+    it = {b'Iris-setosa': 0, b'Iris-versicolor': 1, b'Iris-virginica': 2}
+    return it[s]
+path ='shuju.txt'  # 数据文件路径
+data = np.loadtxt(path,
+                  dtype=float,                   # 数据类型
+                  delimiter=',',                 # 数据以什么分割符号分割数据
+                  converters={4: iris_type})     # 对某一列数据（第四列）进行某种类型的转换（）
+X, y = np.split(data, (4,), axis=1)
+x = X[:, 0:4]#4个特征
+y=y.reshape((-1))
+clf = svm.SVC(kernel='rbf',                      # 核函数
+               gamma=0.1,
+             decision_function_shape='ovo',     # one vs one 分类问题
+              C=0.8)
+clf.fit(x, y)                        # 训练
+n=input("输入测试数据：")
+nlist=n.split(",")
+nlist = [float(nlist[i]) for i in range(len(nlist))]   #将输入的数组转化为一维数组
+M = []
+for i in range(0, len(nlist), 4):
+    M.append(nlist[i:i+4])             #将一维数组转化为二维数组
+na=clf.predict(M)
+if na==[0.]:
+    print("Iris-setosa")
+if na==[1.]:
+    print("Iris-versicolor")
+if na==[2.]:
+    print("Iris-virginica")
