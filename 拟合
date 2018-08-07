@@ -1,35 +1,69 @@
-import tensorflow as tf    
+# -*- coding: utf-8 -*-
+import tensorflow as tf
 import numpy as np
-import random
 import matplotlib.pyplot as plt
-X=np.linspace(-4,4,200)[:,np.newaxis]#加维度
-noise=np.random.normal(0,1,X.shape)#加噪点，
-Y=np.square(X)-25+noise 
-X=np.reshape(X,(200,1))
-Y=np.reshape(Y,(200,1))
-#%% ANN
-with tf.name_scope('Input'):
-    X_in=tf.placeholder('float',shape=[None,1])
-    Y_in=tf.placeholder('float',shape=[None,1])
-with tf.name_scope('Layer'):
-    W1=tf.Variable(tf.random_normal([1,4],mean=1,stddev=0.2),name='w1')
-    b1=tf.Variable(tf.constant(0.1,shape=[4],dtype=tf.float32),name='b1')
-    out1=tf.nn.sigmoid(tf.add(tf.matmul(X_in,W1),b1))
-with tf.name_scope('Output'):
-    W2=tf.Variable(tf.random_normal([4,1],mean=1,stddev=0.2),name='w2')
-    b2=tf.Variable(tf.constant(0.1,shape=[1],dtype=tf.float32),name='b2')
-    out2=tf.add(tf.matmul(out1,W2),b2)
-with tf.name_scope('Evaluate'):
-    Loss=tf.reduce_mean(tf.square(out2-Y_in))
-    trainstep=tf.train.GradientDescentOptimizer(0.1).minimize(Loss)
-#%% Train
+
+plotdata = { "batchsize":[], "loss":[] }
+def moving_average(a, w=11):
+    if len(a) < w: 
+        return a[:]    
+    return [val if idx < w else sum(a[(idx-w):idx])/w for idx, val in enumerate(a)]
+
+#生成模拟数据，二次函数关系
+train_X = np.linspace(-4, 4, 200)[:, np.newaxis]
+noise=np.random.normal(0,0.5,train_X.shape)
+train_Y = train_X*train_X -25 + np.random.uniform(0,1)*1+ noise
+print(np.random.uniform(0,1))
+
+
+# 创建模型
+# 占位符
+X = tf.placeholder("float",[None,1])
+Y = tf.placeholder("float",[None,1])
+# 模型参数
+W1 = tf.Variable(tf.random_normal([1,10]), name="weight1")
+b1 = tf.Variable(tf.zeros([1,10]), name="bias1")
+W2 = tf.Variable(tf.random_normal([10,6]), name="weight2")
+b2 = tf.Variable(tf.zeros([1,6]), name="bias2")
+W3 = tf.Variable(tf.random_normal([6,1]), name="weight3")
+b3 = tf.Variable(tf.zeros([1]), name="bias3")
+
+# 前向结构
+z1 = tf.matmul(X, W1) + b1
+z2 = tf.nn.relu(z1)
+z3 = tf.matmul(z2, W2) + b2
+z4 = tf.nn.relu(z3)
+z5 = tf.matmul(z4, W3) + b3
+
+#反向优化
+cost =tf.reduce_mean( tf.square(Y - z5))
+learning_rate = 0.01
+optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(cost) #Gradient descent
+
+# 初始化变量
+init = tf.global_variables_initializer()
+# 训练参数
+training_epochs = 5000
+display_step = 2
+
+# 启动session
 with tf.Session() as sess:
-    step=0
-    sess.run(tf.global_variables_initializer())
-    for h in range(2000):
-        sess.run(trainstep,feed_dict={X_in:X, Y_in:Y})
+    sess.run(init)
+    for epoch in range(training_epochs+1):
+        sess.run(optimizer, feed_dict={X: train_X, Y: train_Y})
 
-    Y_=sess.run(out2,feed_dict={X_in:X})
-plt.plot(X,Y,X,Y_)
-plt.show()
+        #显示训练中的详细信息
+        if epoch % display_step == 0:
+            loss = sess.run(cost, feed_dict={X: train_X, Y:train_Y})
+       
+            if not (loss == "NA" ):
+                plotdata["batchsize"].append(epoch)
+                plotdata["loss"].append(loss)
+    print (" Finish")
+    plt.figure()
+    plt.plot(train_X,train_Y)
+    plt.plot(train_X,sess.run(z5, feed_dict={X: train_X}),'r',lw=1)
+    plt.show()
 
+
+    
