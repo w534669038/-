@@ -1,0 +1,149 @@
+
+# coding: utf-8
+
+# In[ ]:
+
+
+
+# coding: utf-8
+
+# In[7]:
+
+
+from IPython.display import HTML
+HTML('<iframe width="560" height="315" src="https://www.youtube.com/embed/q2ZOEFAaaI0?showinfo=0" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>')
+
+import time
+import numpy as np
+import gym
+import random
+#创建一个环境
+print("创建环境:")
+env = gym.make("Taxi-v2")
+env.render()
+action_size = env.action_space.n
+#print("Action size ", action_size)
+#创建Q-table并初始化
+state_size = env.observation_space.n
+#print("State size ", state_size)
+"""The Taxi Problem  出租车问题
+    from "Hierarchical Reinforcement Learning with the MAXQ Value Function Decomposition"
+    来自“具有MAXQ值函数分解的分层强化学习”
+    rendering:渲染：
+    - blue: passenger
+    - 蓝色：乘客
+    - magenta: destination
+    - 洋红色：目的地
+    - yellow: empty taxi
+    - 黄色：空的出租车
+    - green: full taxi
+    - 绿色：满座的出租车
+    - other letters: locations
+    - 其他字母：地点
+    """
+
+qtable = np.zeros((state_size, action_size))
+#print(qtable)
+
+
+total_episodes = 50000        # Total episodes总集
+total_test_episodes = 100     # Total test episodes总测试集
+max_steps = 99                # Max steps per episode最大步数
+
+learning_rate = 0.8            # Learning rate学习率
+gamma = 0.618                 # Discounting rate
+
+# Exploration parameters
+epsilon = 1.0                 # Exploration rate
+max_epsilon = 1.0             # Exploration probability at start
+min_epsilon = 0.01            # Minimum exploration probability 
+decay_rate = 0.01             # Exponential decay rate for exploration prob
+print("开始学习:")
+
+# 2 For life or until learning is stopped
+for episode in range(total_episodes):
+    # Reset the environment重置环境
+    state = env.reset()
+    step = 0
+    done = False
+    if episode%100==0:
+        print("{e}/50000.".format(e=episode))
+    for step in range(max_steps):
+        # 3. Choose an action a in the current world state (s)选择当前行为
+        ## First we randomize a number随机化一个数
+        exp_exp_tradeoff = random.uniform(0,1)
+        
+        ## If this number > greater than epsilon --> exploitation (taking the biggest Q value for this state)
+        #如果这个数大于ε，将最大的Q值赋予此状态
+        if exp_exp_tradeoff > epsilon:
+            action = np.argmax(qtable[state,:])
+        
+        # Else doing a random choice --> exploration做随机选择
+        else:
+            action = env.action_space.sample()
+        
+        # Take the action (a) and observe the outcome state(s') and reward (r)
+        #进行actiona观察state，reward
+        new_state, reward, done, info = env.step(action)
+
+        # Update Q(s,a):= Q(s,a) + lr [R(s,a) + gamma * max Q(s',a') - Q(s,a)]
+        qtable[state, action] = qtable[state, action] + learning_rate * (reward + gamma * 
+                                    np.max(qtable[new_state, :]) - qtable[state, action])
+                
+        # Our new state is state
+        state = new_state
+        
+        # If done : finish episode
+        if done == True: 
+            break
+        
+    episode += 1
+    
+    # Reduce epsilon (because we need less and less exploration)
+    epsilon = min_epsilon + (max_epsilon - min_epsilon)*np.exp(-decay_rate*episode)
+    
+    
+    
+    
+    env.reset()
+rewards = []
+k=0
+print("开始测试：")
+for episode in range(total_test_episodes):
+    state = env.reset()
+    step = 0
+    done = False
+    total_rewards = 0
+    print("****************************************************")
+    print("EPISODE ", episode)
+
+    for step in range(max_steps):
+        env.render()
+        time.sleep(0.5)
+        # Take the action (index) that have the maximum expected future reward given that state
+        action = np.argmax(qtable[state,:])
+        
+        new_state, reward, done, info = env.step(action)
+        
+        total_rewards += reward
+        
+        if done:
+            rewards.append(total_rewards)
+            print ("Score", total_rewards)
+            k=k+1
+            break
+        state = new_state
+        env.close()
+env.close()
+if(k==100):
+    print("全部安全到达目的地")
+else:
+    print("未能全部到达")
+print ("Score over time: " +  str(sum(rewards)/total_test_episodes))
+
+
+# In[ ]:
+
+
+# 
+
